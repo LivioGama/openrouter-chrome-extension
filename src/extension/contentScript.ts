@@ -3,6 +3,23 @@ import { DataProcessor } from "./modules/dataProcessor";
 import { MessageHandler } from "./modules/messaging";
 import { UIManager } from "./modules/ui";
 
+// Official Chrome Extension approach: Use chrome.storage for debug mode
+let DEV_MODE: boolean = false; // Default to production
+
+// Initialize DEV_MODE from storage (official Chrome extension pattern)
+chrome.storage.sync.get(['debugMode'], (result) => {
+  DEV_MODE = Boolean(result.debugMode);
+  console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (from chrome.storage)`);
+});
+
+// Listen for debug mode changes (official Chrome extension pattern)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.debugMode) {
+    DEV_MODE = Boolean(changes.debugMode.newValue);
+    console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (updated via chrome.storage)`);
+  }
+});
+
 class OpenRouterAnalyzer {
   constructor() {
     console.log("OpenRouter Analyzer: Initializing...");
@@ -186,6 +203,11 @@ class OpenRouterAnalyzer {
   }
 
   private getCachedData(): string | null {
+    // Only use cache in development mode
+    if (!DEV_MODE) {
+      return null;
+    }
+
     try {
       const expiry = localStorage.getItem("openrouter_dev_cache_expiry");
       const cached = localStorage.getItem("openrouter_dev_cache");
@@ -324,13 +346,23 @@ if (typeof window !== "undefined") {
   (window as any).OpenRouterDev = {
     clearCache: () => OpenRouterAPI.clearDevCache(),
     checkCache: () => globalAnalyzer?.checkAndDisplayCachedResults(),
+    enableDebug: () => {
+      chrome.storage.sync.set({ debugMode: true }, () => {
+        console.log("🛠️ DEV: Debug mode enabled via chrome.storage");
+      });
+    },
+    disableDebug: () => {
+      chrome.storage.sync.set({ debugMode: false }, () => {
+        console.log("🛠️ DEV: Debug mode disabled via chrome.storage");
+      });
+    },
     info: () =>
       console.log(
-        "🛠️ DEV Utils: Use OpenRouterDev.clearCache() to clear cache, OpenRouterDev.checkCache() to test cache display",
+        "🛠️ DEV Utils: Use OpenRouterDev.clearCache() to clear cache, OpenRouterDev.checkCache() to test cache display, OpenRouterDev.enableDebug()/disableDebug() to control debug mode",
       ),
   };
   console.log(
-    "🛠️ DEV: Use OpenRouterDev.clearCache() to clear cache, OpenRouterDev.checkCache() to test cache display",
+    "🛠️ DEV: Use OpenRouterDev.clearCache() to clear cache, OpenRouterDev.checkCache() to test cache display, OpenRouterDev.enableDebug()/disableDebug() to control debug mode",
   );
 }
 

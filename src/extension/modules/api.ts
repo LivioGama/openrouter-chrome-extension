@@ -1,8 +1,35 @@
+// Official Chrome Extension approach: Use chrome.storage for debug mode
+let DEV_MODE: boolean = false; // Default to production
+
+// Initialize DEV_MODE from storage (official Chrome extension pattern)
+chrome.storage.sync.get(['debugMode'], (result) => {
+  DEV_MODE = Boolean(result.debugMode);
+  console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (from chrome.storage)`);
+});
+
+// Listen for debug mode changes (official Chrome extension pattern)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.debugMode) {
+    DEV_MODE = Boolean(changes.debugMode.newValue);
+    console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (updated via chrome.storage)`);
+  }
+});
+
+// Helper function to set debug mode (for development)
+export const setDebugMode = (enabled: boolean): void => {
+  chrome.storage.sync.set({ debugMode: enabled }, () => {
+    console.log(`Debug mode ${enabled ? 'enabled' : 'disabled'} via chrome.storage`);
+  });
+};
+
 export class OpenRouterAPI {
-  private static readonly DEV_MODE = true; // Set to false for production
   private static readonly CACHE_KEY = "openrouter_dev_cache";
   private static readonly CACHE_EXPIRY_KEY = "openrouter_dev_cache_expiry";
   private static readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+  private static getDevMode(): boolean {
+    return DEV_MODE;
+  }
 
   private static extractNextAction(): string {
     // Try to find next-action in various places
@@ -140,7 +167,7 @@ export class OpenRouterAPI {
     toParam: string | null,
   ): Promise<string> {
     // Check for cached data in dev mode
-    if (this.DEV_MODE) {
+    if (this.getDevMode()) {
       const cachedData = this.getCachedData();
       if (cachedData) {
         console.log("🚀 DEV: Using cached API response");
@@ -201,7 +228,7 @@ export class OpenRouterAPI {
       const responseText = await response.text();
 
       // Cache the response in dev mode
-      if (this.DEV_MODE) {
+      if (this.getDevMode()) {
         this.setCachedData(responseText);
         console.log("💾 DEV: API response cached for 5 minutes");
       }

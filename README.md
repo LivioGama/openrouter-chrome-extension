@@ -57,6 +57,40 @@ bun run build   # Build for production
 
 The extension uses Vite for fast building and TypeScript for reliability. Pro tip: Check the console for dev logs with 🚀 DEV prefixes!
 
+### Debug Mode (Official Chrome Extension Approach)
+
+The extension uses the **official Chrome extension pattern** with `chrome.storage` for debug mode management:
+
+**Enable Debug Mode:**
+```javascript
+// In browser console (after extension loads)
+OpenRouterDev.enableDebug()
+```
+
+**Disable Debug Mode:**
+```javascript
+// In browser console
+OpenRouterDev.disableDebug()
+```
+
+**Debug Mode Features:**
+- ✅ API response caching (30 minutes)
+- ✅ Development UI buttons (refresh, cache clear)
+- ✅ Detailed console logging
+- ✅ Cache status indicators
+
+**Production Mode:**
+- ❌ Caching disabled (no localStorage usage)
+- ❌ Development buttons hidden
+- ❌ Minimal console output
+
+**Storage Location:**
+Debug mode setting is stored in `chrome.storage.sync` under the key `debugMode`.
+
+**Console Output:**
+- `OpenRouter Analyzer: Debug mode ENABLED/DISABLED (from chrome.storage)`
+- `OpenRouter Analyzer: Debug mode ENABLED/DISABLED (updated via chrome.storage)`
+
 ## 🤝 Want to contribute?
 
 We'd love that! Just fork, make your changes, and open a PR. Let's make this thing even better together.

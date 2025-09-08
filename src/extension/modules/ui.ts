@@ -1,5 +1,22 @@
 import { OpenRouterAPI } from "./api";
 
+// Official Chrome Extension approach: Use chrome.storage for debug mode
+let DEV_MODE: boolean = false; // Default to production
+
+// Initialize DEV_MODE from storage (official Chrome extension pattern)
+chrome.storage.sync.get(['debugMode'], (result) => {
+  DEV_MODE = Boolean(result.debugMode);
+  console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (from chrome.storage)`);
+});
+
+// Listen for debug mode changes (official Chrome extension pattern)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.debugMode) {
+    DEV_MODE = Boolean(changes.debugMode.newValue);
+    console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (updated via chrome.storage)`);
+  }
+});
+
 export class UIManager {
   static createAnalyzeButton(
     exportBtn: Element,
@@ -106,7 +123,7 @@ export class UIManager {
               const deleteBtn = buttonContainer.querySelector(
                 'button[title*="cache"]',
               ) as HTMLButtonElement;
-              if (deleteBtn) {
+              if (deleteBtn && DEV_MODE) {
                 const expiry = localStorage.getItem(
                   "openrouter_dev_cache_expiry",
                 );
@@ -153,6 +170,16 @@ export class UIManager {
 
       // Check if there's cached data and update button state
       const updateDeleteButtonState = () => {
+        if (!DEV_MODE) {
+          // In production, disable cache-related UI elements
+          if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.style.opacity = "0.5";
+            deleteBtn.title = "Cache disabled in production";
+          }
+          return;
+        }
+
         try {
           const expiry = localStorage.getItem("openrouter_dev_cache_expiry");
           const cached = localStorage.getItem("openrouter_dev_cache");
@@ -176,6 +203,11 @@ export class UIManager {
 
       deleteBtn.addEventListener("click", (event) => {
         event.preventDefault();
+        if (!DEV_MODE) {
+          console.log("Cache operations disabled in production");
+          return;
+        }
+
         try {
           OpenRouterAPI.clearDevCache();
           console.log("🗑️ DEV: Cache cleared (no API call)");
@@ -805,13 +837,8 @@ export class UIManager {
   }
 
   private static isDevMode(): boolean {
-    // Check if we can access the DEV_MODE from OpenRouterAPI
-    try {
-      // Try to access a dev-only method to determine if we're in dev mode
-      return typeof OpenRouterAPI.clearDevCache === "function";
-    } catch {
-      return true; // Default to true for development
-    }
+    // Return the DEV_MODE from chrome.storage
+    return DEV_MODE;
   }
 
   private static async handleForceRefresh(
