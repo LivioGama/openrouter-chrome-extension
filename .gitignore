@@ -88,3 +88,5 @@ temp/
 # Vite
 .vite/
 PUBLISH_GUIDE.md
+.env
+oauth_client.json

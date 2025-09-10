@@ -7,7 +7,9 @@ export default defineConfig(({ mode }) => ({
     plugins: [
     copy({
       targets: [
-        { src: 'src/extension/icons/*', dest: 'dist' }
+        { src: 'src/extension/icons/*', dest: 'dist' },
+        { src: 'src/extension/popup.html', dest: 'dist' },
+        { src: 'src/extension/popup.css', dest: 'dist' }
       ],
       hook: 'writeBundle'
     }),
@@ -21,6 +23,7 @@ export default defineConfig(({ mode }) => ({
               input: {
           contentScript: path.resolve(__dirname, './src/extension/contentScript.ts'),
           serviceWorker: path.resolve(__dirname, './src/extension/serviceWorker.ts'),
+          popup: path.resolve(__dirname, './src/extension/popup.ts'),
         },
       output: {
         entryFileNames: '[name].js',

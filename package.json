@@ -4,10 +4,15 @@
   "description": "OpenRouter CSV Cost Analyzer Chrome Extension",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build",
+    "build": "bun run generate-icons && vite build",
+    "generate-icons": "magick icon-pwa.png -resize 16x16 src/extension/icons/icon16.png && magick icon-pwa.png -resize 32x32 src/extension/icons/icon32.png && magick icon-pwa.png -resize 48x48 src/extension/icons/icon48.png && magick icon-pwa.png -resize 128x128 src/extension/icons/icon128.png",
     "package": "bun run build && zip -r extension.zip dist/* && mv extension.zip ~/Desktop",
     "wss": "bunx wss-ext-reloader --port 3001",
-    "dev:full": "concurrently --kill-others-on-fail \"bun run wss\" \"bun run dev\""
+    "dev:full": "concurrently --kill-others-on-fail \"bun run wss\" \"bun run dev\"",
+    "release": "bun run build && git add . && git commit -m \"Release $(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\" ,]//g')\" && git push",
+    "release:tag": "git tag v$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\" ,]//g') && git push --tags",
+    "setup:api": "node scripts/setup-google-api.js",
+    "generate-token": "node scripts/generate-refresh-token-from-json.js"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",

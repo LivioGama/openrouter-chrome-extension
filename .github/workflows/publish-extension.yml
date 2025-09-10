@@ -1,0 +1,61 @@
+name: Publish Chrome Extension
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/**'
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Chrome Extension
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build extension
+        run: bun run build
+
+      - name: Create extension archive
+        run: |
+          cd dist
+          zip -r ../openrouter-extension-${{ github.sha }}.zip .
+
+      - name: Install Chrome Web Store CLI
+        run: npm install -g chrome-webstore-upload-cli@3.0.0
+
+      - name: Upload to Chrome Web Store
+        run: |
+          echo "🚀 Starting Chrome Web Store upload..."
+          chrome-webstore-upload upload \
+            --source openrouter-extension-${{ github.sha }}.zip \
+            --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
+            --client-id ${{ secrets.CHROME_CLIENT_ID }} \
+            --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
+            --refresh-token ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+          echo "✅ Extension uploaded successfully!"
+          echo "📝 Next steps:"
+          echo "   1. Go to Chrome Web Store Developer Dashboard"
+          echo "   2. Find your extension and click 'Submit for Review'"
+          echo "   3. Wait 1-2 business days for approval"
+
+      - name: Upload artifact for manual download
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-${{ github.sha }}
+          path: openrouter-extension-${{ github.sha }}.zip
