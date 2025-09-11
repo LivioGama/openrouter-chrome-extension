@@ -7,7 +7,19 @@ dist/
 build/
 
 # IDE and editors
-.idea/
+# Fine-grained .idea ignores - keep fileWatchers.xml for ESLint auto-fix
+.idea/workspace.xml
+.idea/inspectionProfiles/
+.idea/dictionaries/
+.idea/*.iml
+.idea/modules.xml.bak
+.idea/.name
+.idea/copilot.data.migration.agent.xml
+.idea/copilot.data.migration.edit.xml
+.idea/gbrowser_project.xml
+.idea/gbrowsers.xml
+.idea/libraries/test_package.xml
+.idea/libraries/ts_commonjs_default_export.xml
 .vscode/
 *.swp
 *.swo

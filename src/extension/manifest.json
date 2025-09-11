@@ -2,19 +2,10 @@
   "manifest_version": 3,
   "name": "OpenRouter CSV Cost Analyzer",
   "description": "Intercepts and analyzes OpenRouter CSV data from the 'Export' button to calculate total cost per model.",
-  "version": "1.0.1",
+  "version": "1.0.2",
 
   "background": {
     "service_worker": "serviceWorker.js"
-  },
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icon16.png",
-      "32": "icon32.png",
-      "48": "icon-pwa.png",
-      "128": "icon128.png"
-    }
   },
   "icons": {
     "16": "icon16.png",

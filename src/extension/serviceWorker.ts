@@ -1,1 +1,4 @@
-console.log('Service worker loaded'); self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()) });
+console.log('Service worker loaded');
+(self as any).addEventListener('activate', (event: any) => {
+  event.waitUntil((self as any).clients.claim())
+})

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="FileWatcherManager">
+    <task name="ESLint Fix (JS)" runOnStartup="false">
+      <trigger type="after:save" />
+      <tool>
+        <name>bun</name>
+        <program>bun</program>
+        <arguments>eslint --fix $FilePathRelativeToProjectRoot$</arguments>
+        <workingDirectory>$ProjectFileDir$</workingDirectory>
+        <outputFile>$FilePath$</outputFile>
+        <outputType>CONSOLE</outputType>
+        <outputFilters />
+      </tool>
+      <fileset>
+        <pattern>**/*.js</pattern>
+      </fileset>
+      <advancedOptions>
+        <passParentEnvs>true</passParentEnvs>
+        <includeSubdirectories>true</includeSubdirectories>
+        <trackOnlyRoot>true</trackOnlyRoot>
+        <useDefaultExcludes>true</useDefaultExcludes>
+        <checkFileExists>true</checkFileExists>
+        <autoSave>true</autoSave>
+      </advancedOptions>
+    </task>
+    <task name="ESLint Fix (JSX)" runOnStartup="false">
+      <trigger type="after:save" />
+      <tool>
+        <name>bun</name>
+        <program>bun</program>
+        <arguments>eslint --fix $FilePathRelativeToProjectRoot$</arguments>
+        <workingDirectory>$ProjectFileDir$</workingDirectory>
+        <outputFile>$FilePath$</outputFile>
+        <outputType>CONSOLE</outputType>
+        <outputFilters />
+      </tool>
+      <fileset>
+        <pattern>**/*.jsx</pattern>
+      </fileset>
+      <advancedOptions>
+        <passParentEnvs>true</passParentEnvs>
+        <includeSubdirectories>true</includeSubdirectories>
+        <trackOnlyRoot>true</trackOnlyRoot>
+        <useDefaultExcludes>true</useDefaultExcludes>
+        <checkFileExists>true</checkFileExists>
+        <autoSave>true</autoSave>
+      </advancedOptions>
+    </task>
+    <task name="ESLint Fix (TS)" runOnStartup="false">
+      <trigger type="after:save" />
+      <tool>
+        <name>bun</name>
+        <program>bun</program>
+        <arguments>run eslint --fix $FilePathRelativeToProjectRoot$</arguments>
+        <workingDirectory>$ContentRoot$</workingDirectory>
+        <outputFile>$FilePath$</outputFile>
+        <outputType>CONSOLE</outputType>
+        <outputFilters />
+      </tool>
+      <fileset>
+        <pattern>**/*.ts</pattern>
+      </fileset>
+      <advancedOptions>
+        <passParentEnvs>true</passParentEnvs>
+        <includeSubdirectories>true</includeSubdirectories>
+        <trackOnlyRoot>true</trackOnlyRoot>
+        <useDefaultExcludes>true</useDefaultExcludes>
+        <checkFileExists>true</checkFileExists>
+        <autoSave>true</autoSave>
+      </advancedOptions>
+    </task>
+    <task name="ESLint Fix (TSX)" runOnStartup="false">
+      <trigger type="after:save" />
+      <tool>
+        <name>bun</name>
+        <program>bun</program>
+        <arguments>eslint --fix $FilePathRelativeToProjectRoot$</arguments>
+        <workingDirectory>$ProjectFileDir$</workingDirectory>
+        <outputFile>$FilePath$</outputFile>
+        <outputType>CONSOLE</outputType>
+        <outputFilters />
+      </tool>
+      <fileset>
+        <pattern>**/*.tsx</pattern>
+      </fileset>
+      <advancedOptions>
+        <passParentEnvs>true</passParentEnvs>
+        <includeSubdirectories>true</includeSubdirectories>
+        <trackOnlyRoot>true</trackOnlyRoot>
+        <useDefaultExcludes>true</useDefaultExcludes>
+        <checkFileExists>true</checkFileExists>
+        <autoSave>true</autoSave>
+      </advancedOptions>
+    </task>
+  </component>
+</project>

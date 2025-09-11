@@ -1,43 +1,24 @@
-import { OpenRouterAPI } from "./api";
-
-// Official Chrome Extension approach: Use chrome.storage for debug mode
-let DEV_MODE: boolean = false; // Default to production
-
-// Initialize DEV_MODE from storage (official Chrome extension pattern)
-chrome.storage.sync.get(['debugMode'], (result) => {
-  DEV_MODE = Boolean(result.debugMode);
-  console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (from chrome.storage)`);
-});
-
-// Listen for debug mode changes (official Chrome extension pattern)
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.debugMode) {
-    DEV_MODE = Boolean(changes.debugMode.newValue);
-    console.log(`OpenRouter Analyzer: Debug mode ${DEV_MODE ? 'ENABLED' : 'DISABLED'} (updated via chrome.storage)`);
-  }
-});
+import {OpenRouterAPI} from './api'
+import {DEV_MODE} from './debug'
 
 export class UIManager {
   static createAnalyzeButton(
     exportBtn: Element,
     onClick: (event: Event, exportBtn: Element) => void,
   ): boolean {
-    // Check if our button container already exists using unique ID
-    if (document.getElementById("openrouter-analyze-buttons")) {
+    if (document.getElementById('openrouter-analyze-buttons')) {
       console.log(
-        "OpenRouter Analyzer: Analyze buttons already exist, skipping...",
-      );
-      return true;
+        'OpenRouter Analyzer: Analyze buttons already exist, skipping...',
+      )
+      return true
     }
 
-    // Create container for both buttons
-    const buttonContainer = document.createElement("div");
-    buttonContainer.id = "openrouter-analyze-buttons";
-    buttonContainer.className = "flex gap-2";
+    const buttonContainer = document.createElement('div')
+    buttonContainer.id = 'openrouter-analyze-buttons'
+    buttonContainer.className = 'flex gap-2'
 
-    // Create analyze button
-    const analyzeBtn = document.createElement("button");
-    analyzeBtn.className = exportBtn.className;
+    const analyzeBtn = document.createElement('button')
+    analyzeBtn.className = exportBtn.className
     analyzeBtn.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 mr-1">
         <line x1="12" y1="20" x2="12" y2="10"/>
@@ -45,16 +26,15 @@ export class UIManager {
         <line x1="6" y1="20" x2="6" y2="16"/>
       </svg>
       <span class="button-text">Group by Model</span>
-    `;
+    `
 
-    const onClickWithLoading = async (event: Event, exportBtn: Element) => {
+    const onClickWithLoading = async(event: Event, exportBtn: Element) => {
       const buttonText = analyzeBtn.querySelector(
-        ".button-text",
-      ) as HTMLElement;
-      const originalText = buttonText.textContent;
+        '.button-text',
+      ) as HTMLElement
+      const originalText = buttonText.textContent
 
-      // Show loading state
-      analyzeBtn.disabled = true;
+      analyzeBtn.disabled = true
       buttonText.innerHTML = `
         <div class="flex items-center gap-1">
           <div class="flex gap-0.5">
@@ -64,31 +44,28 @@ export class UIManager {
           </div>
           <span class="ml-1">Loading...</span>
         </div>
-      `;
+      `
 
       try {
-        await onClick(event, exportBtn);
+        await onClick(event, exportBtn)
       } finally {
-        // Restore original state
-        analyzeBtn.disabled = false;
-        buttonText.innerHTML = originalText!;
+        analyzeBtn.disabled = false
+        buttonText.innerHTML = originalText!
       }
-    };
+    }
 
-    analyzeBtn.addEventListener("click", (event) =>
+    analyzeBtn.addEventListener('click', event =>
       onClickWithLoading(event, exportBtn),
-    );
+    )
 
-    buttonContainer.appendChild(analyzeBtn);
+    buttonContainer.appendChild(analyzeBtn)
 
-    // Add refresh and delete buttons in DEV mode
-    if (this.isDevMode()) {
-      // Refresh button - clears cache and fetches fresh data
-      const refreshBtn = document.createElement("button");
+    if (DEV_MODE) {
+      const refreshBtn = document.createElement('button')
       refreshBtn.className = exportBtn.className
-        .replace(/bg-\w+-\d+/, "bg-blue-500")
-        .replace(/hover:bg-\w+-\d+/, "hover:bg-blue-600");
-      refreshBtn.title = "Refresh data (clears cache and fetches fresh)";
+        .replace(/bg-\w+-\d+/, 'bg-blue-500')
+        .replace(/hover:bg-\w+-\d+/, 'hover:bg-blue-600')
+      refreshBtn.title = 'Refresh data (clears cache and fetches fresh)'
       refreshBtn.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4">
           <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -96,68 +73,65 @@ export class UIManager {
           <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
           <path d="M3 21v-5h5"/>
         </svg>
-      `;
+      `
 
-      const onRefreshWithLoading = async (
+      const onRefreshWithLoading = async(
         event: Event,
         exportBtn: Element,
         onClick: (event: Event, exportBtn: Element) => void,
       ) => {
-        const originalHTML = refreshBtn.innerHTML;
+        const originalHTML = refreshBtn.innerHTML
 
-        // Show loading state for refresh button
-        refreshBtn.disabled = true;
+        refreshBtn.disabled = true
         refreshBtn.innerHTML = `
         <div class="flex items-center gap-0.5">
           <div class="w-1 h-1 bg-current rounded-full animate-bounce" style="animation-delay: 0ms"></div>
           <div class="w-1 h-1 bg-current rounded-full animate-bounce" style="animation-delay: 150ms"></div>
           <div class="w-1 h-1 bg-current rounded-full animate-bounce" style="animation-delay: 300ms"></div>
         </div>
-      `;
+      `
 
         try {
-          await this.handleForceRefresh(event, exportBtn, onClick);
-          // After successful refresh, update delete button state
+          await this.handleForceRefresh(event, exportBtn, onClick)
+
           setTimeout(() => {
             try {
               const deleteBtn = buttonContainer.querySelector(
                 'button[title*="cache"]',
-              ) as HTMLButtonElement;
+              ) as HTMLButtonElement
               if (deleteBtn && DEV_MODE) {
                 const expiry = localStorage.getItem(
-                  "openrouter_dev_cache_expiry",
-                );
-                const cached = localStorage.getItem("openrouter_dev_cache");
+                  'openrouter_dev_cache_expiry',
+                )
+                const cached = localStorage.getItem('openrouter_dev_cache')
                 const hasCache =
-                  expiry && cached && Date.now() < parseInt(expiry);
-                deleteBtn.disabled = !hasCache;
-                deleteBtn.style.opacity = hasCache ? "1" : "0.5";
+                  expiry && cached && Date.now() < parseInt(expiry)
+                deleteBtn.disabled = !hasCache
+                deleteBtn.style.opacity = hasCache ? '1' : '0.5'
               }
             } catch (error) {
               console.warn(
-                "DEV: Error updating delete button state after refresh:",
+                'DEV: Error updating delete button state after refresh:',
                 error,
-              );
+              )
             }
-          }, 100);
+          }, 100)
         } finally {
-          // Restore original state
-          refreshBtn.disabled = false;
-          refreshBtn.innerHTML = originalHTML;
+          refreshBtn.disabled = false
+          refreshBtn.innerHTML = originalHTML
         }
-      };
+      }
 
-      refreshBtn.addEventListener("click", (event) =>
+      refreshBtn.addEventListener('click', event =>
         onRefreshWithLoading(event, exportBtn, onClick),
-      );
-      buttonContainer.appendChild(refreshBtn);
+      )
+      buttonContainer.appendChild(refreshBtn)
 
-      // Delete button - only clears cache
-      const deleteBtn = document.createElement("button");
+      const deleteBtn = document.createElement('button')
       deleteBtn.className = exportBtn.className
-        .replace(/bg-\w+-\d+/, "bg-red-500")
-        .replace(/hover:bg-\w+-\d+/, "hover:bg-red-600");
-      deleteBtn.title = "Clear cache only";
+        .replace(/bg-\w+-\d+/, 'bg-red-500')
+        .replace(/hover:bg-\w+-\d+/, 'hover:bg-red-600')
+      deleteBtn.title = 'Clear cache only'
       deleteBtn.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4">
           <path d="M3 6h18"/>
@@ -166,62 +140,59 @@ export class UIManager {
           <line x1="10" y1="11" x2="10" y2="17"/>
           <line x1="14" y1="11" x2="14" y2="17"/>
         </svg>
-      `;
+      `
 
-      // Check if there's cached data and update button state
       const updateDeleteButtonState = () => {
         if (!DEV_MODE) {
-          // In production, disable cache-related UI elements
           if (deleteBtn) {
-            deleteBtn.disabled = true;
-            deleteBtn.style.opacity = "0.5";
-            deleteBtn.title = "Cache disabled in production";
+            deleteBtn.disabled = true
+            deleteBtn.style.opacity = '0.5'
+            deleteBtn.title = 'Cache disabled in production'
           }
-          return;
+          return
         }
 
         try {
-          const expiry = localStorage.getItem("openrouter_dev_cache_expiry");
-          const cached = localStorage.getItem("openrouter_dev_cache");
+          const expiry = localStorage.getItem('openrouter_dev_cache_expiry')
+          const cached = localStorage.getItem('openrouter_dev_cache')
 
-          const hasCache = expiry && cached && Date.now() < parseInt(expiry);
+          const hasCache = expiry && cached && Date.now() < parseInt(expiry)
 
           if (deleteBtn) {
-            deleteBtn.disabled = !hasCache;
-            deleteBtn.style.opacity = hasCache ? "1" : "0.5";
+            deleteBtn.disabled = !hasCache
+            deleteBtn.style.opacity = hasCache ? '1' : '0.5'
             deleteBtn.title = hasCache
-              ? "Clear cache only"
-              : "No cache to clear";
+              ? 'Clear cache only'
+              : 'No cache to clear'
           }
         } catch (error) {
-          console.warn("DEV: Error updating delete button state:", error);
+          console.warn('DEV: Error updating delete button state:', error)
         }
-      };
+      }
 
-      // Initial state check
-      updateDeleteButtonState();
+      updateDeleteButtonState()
 
-      deleteBtn.addEventListener("click", (event) => {
-        event.preventDefault();
+      deleteBtn.addEventListener('click', event => {
+        event.preventDefault()
         if (!DEV_MODE) {
-          console.log("Cache operations disabled in production");
-          return;
+          console.log('Cache operations disabled in production')
+          return
         }
 
         try {
-          OpenRouterAPI.clearDevCache();
-          console.log("🗑️ DEV: Cache cleared (no API call)");
-          updateDeleteButtonState(); // Update state after clearing
+          OpenRouterAPI.clearDevCache()
+          console.log('🗑️ DEV: Cache cleared (no API call)')
+          updateDeleteButtonState()
         } catch (error) {
-          console.warn("DEV: Error clearing cache:", error);
+          console.warn('DEV: Error clearing cache:', error)
         }
-      });
+      })
 
-      buttonContainer.appendChild(deleteBtn);
+      buttonContainer.appendChild(deleteBtn)
     }
 
-    exportBtn.parentNode?.insertBefore(buttonContainer, exportBtn.nextSibling);
-    return true; // Successfully created button
+    exportBtn.parentNode?.insertBefore(buttonContainer, exportBtn.nextSibling)
+    return true
   }
 
   static displayResults(
@@ -231,136 +202,130 @@ export class UIManager {
     tokensPerModel?: Record<string, number>,
   ): void {
     console.log(
-      "🧪 DEBUG: displayResults called with",
+      '🧪 DEBUG: displayResults called with',
       Object.keys(aggregated || {}),
       totalCost,
       totalTokens,
-    );
+    )
 
-    // Validate input data
     if (!aggregated || Object.keys(aggregated).length === 0) {
-      console.warn("No aggregated data to display");
-      return;
+      console.warn('No aggregated data to display')
+      return
     }
 
-    if (typeof totalCost !== "number" || isNaN(totalCost)) {
-      console.warn("Invalid total cost:", totalCost);
-      return;
+    if (typeof totalCost !== 'number' || isNaN(totalCost)) {
+      console.warn('Invalid total cost:', totalCost)
+      return
     }
 
-    const existingResults = document.getElementById("openrouter-cost-analysis");
+    const existingResults = document.getElementById('openrouter-cost-analysis')
     if (existingResults) {
-      existingResults.remove();
+      existingResults.remove()
     }
 
-    // Try multiple selectors to find a suitable container (prioritize OpenRouter-specific selectors)
-    let tableContainer = document.querySelector(
-      ".text-accent-foreground.rounded-lg.border",
-    );
+    let tableContainer: HTMLElement | null = document.querySelector(
+      '.text-accent-foreground.rounded-lg.border',
+    ) as HTMLElement | null
 
-    // OpenRouter-specific selectors for activity page
     if (!tableContainer) {
       tableContainer = document.querySelector(
-        "[class*='activity'] [class*='table']",
-      )?.parentElement;
+        '[class*=\'activity\'] [class*=\'table\']',
+      )?.parentElement as HTMLElement | null
     }
     if (!tableContainer) {
-      tableContainer = document.querySelector(
-        "[class*='activity'] table",
-      )?.parentElement;
+      tableContainer = document.querySelector('[class*=\'activity\'] table')
+        ?.parentElement as HTMLElement | null
     }
     if (!tableContainer) {
-      tableContainer = document.querySelector("main table")?.parentElement;
+      tableContainer = document.querySelector('main table')
+        ?.parentElement as HTMLElement | null
     }
     if (!tableContainer) {
-      tableContainer =
-        document.querySelector(".container table")?.parentElement;
+      tableContainer = document.querySelector('.container table')
+        ?.parentElement as HTMLElement | null
     }
     if (!tableContainer) {
-      tableContainer = document.querySelector(
-        "[role='main'] table",
-      )?.parentElement;
+      tableContainer = document.querySelector('[role=\'main\'] table')
+        ?.parentElement as HTMLElement | null
     }
 
-    // Generic table selectors
     if (!tableContainer) {
-      tableContainer = document.querySelector("table")?.parentElement;
+      tableContainer = document.querySelector('table')
+        ?.parentElement as HTMLElement | null
     }
     if (!tableContainer) {
-      tableContainer = document.querySelector(".activity-table")?.parentElement;
+      tableContainer = document.querySelector('.activity-table')
+        ?.parentElement as HTMLElement | null
     }
     if (!tableContainer) {
-      tableContainer = document.querySelector(
-        "[data-testid='activity-table']",
-      )?.parentElement;
+      tableContainer = document.querySelector('[data-activity] table')
+        ?.parentElement as HTMLElement | null
     }
 
-    // Content-based detection
     if (!tableContainer) {
-      const containers = document.querySelectorAll("div, section, main");
+      const containers = document.querySelectorAll('div, section, main')
       for (const container of containers) {
-        const textContent = container.textContent || "";
-        const hasTable = container.querySelector("table");
+        const textContent = container.textContent || ''
+        const hasTable = container.querySelector('table')
         const hasActivityKeywords =
-          /model|cost|usage|activity|generation/i.test(textContent);
+          /model|cost|usage|activity|generation/i.test(textContent)
 
         if (hasTable && hasActivityKeywords) {
-          tableContainer = container;
-          console.log("Found container by content analysis:", container);
-          break;
+          tableContainer = container as HTMLElement
+          console.log('Found container by content analysis:', container)
+          break
         }
       }
     }
 
-    // Last resort: any container with a table
     if (!tableContainer) {
-      const tableElement = document.querySelector("table");
+      const tableElement = document.querySelector('table')
       if (tableElement) {
         tableContainer =
-          tableElement.closest("div, section, main") ||
-          tableElement.parentElement;
+          (tableElement.closest('div, section, main') as HTMLElement) ||
+          tableElement.parentElement
       }
     }
 
     if (!tableContainer) {
-      console.warn("Could not find any suitable container to insert results");
-      console.warn("Page URL:", window.location.href);
+      console.warn('Could not find any suitable container to insert results')
+      console.warn('Page URL:', window.location.href)
       console.warn(
-        "Available tables:",
-        document.querySelectorAll("table").length,
-      );
+        'Available tables:',
+        document.querySelectorAll('table').length,
+      )
       console.warn(
-        "Available containers with tables:",
-        Array.from(document.querySelectorAll("table")).map(
-          (t) =>
-            t.closest("div, section, main")?.className || "no-parent-class",
+        'Available containers with tables:',
+        Array.from(document.querySelectorAll('table')).map(
+          t =>
+            t.closest('div, section, main')?.className || 'no-parent-class',
         ),
-      );
-      return;
+      )
+      return
     }
 
     console.log(
-      "Using container for results:",
+      'Using container for results:',
       tableContainer.className || tableContainer.tagName,
-    );
+    )
 
-    console.log("🧪 DEBUG: Table container found", tableContainer);
+    console.log('🧪 DEBUG: Table container found', tableContainer)
 
     const sortedModels = Object.entries(aggregated)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 10);
+      .slice(0, 10)
 
-    const formatter = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
+    })
 
-    const resultsContainer = document.createElement("div");
-    resultsContainer.id = "openrouter-cost-analysis";
+    const resultsContainer = document.createElement('div')
+    resultsContainer.id = 'openrouter-cost-analysis'
     resultsContainer.className =
-      "mb-6 rounded-lg border bg-card text-card-foreground shadow-sm";
+      'mb-6 rounded-lg border bg-card text-card-foreground shadow-sm'
 
     resultsContainer.innerHTML = UIManager.generateResultsHTML(
       sortedModels,
@@ -369,9 +334,9 @@ export class UIManager {
       aggregated,
       totalTokens,
       tokensPerModel,
-    );
+    )
 
-    tableContainer.parentNode?.insertBefore(resultsContainer, tableContainer);
+    tableContainer.parentNode?.insertBefore(resultsContainer, tableContainer)
 
     UIManager.attachShowMoreHandlers(
       resultsContainer,
@@ -380,8 +345,8 @@ export class UIManager {
       totalCost,
       formatter,
       tokensPerModel,
-    );
-    UIManager.animateIn(resultsContainer);
+    )
+    UIManager.animateIn(resultsContainer)
   }
 
   private static generateResultsHTML(
@@ -392,28 +357,27 @@ export class UIManager {
     totalTokens: number = 0,
     tokensPerModel?: Record<string, number>,
   ): string {
-    const top3Models = sortedModels.slice(0, 3);
-    const othersModels = sortedModels.slice(3);
-    const othersTotal = othersModels.reduce((sum, [, cost]) => sum + cost, 0);
+    const top3Models = sortedModels.slice(0, 3)
+    const othersModels = sortedModels.slice(3)
+    const othersTotal = othersModels.reduce((sum, [, cost]) => sum + cost, 0)
 
-    // Calculate token-based groupings (20% threshold)
-    const tokenEntries = tokensPerModel ? Object.entries(tokensPerModel) : [];
+    const tokenEntries = tokensPerModel ? Object.entries(tokensPerModel) : []
     const tokenModels = tokenEntries
       .map(([model, tokens]) => ({
         model,
         tokens,
         percentage: totalTokens > 0 ? (tokens / totalTokens) * 100 : 0,
       }))
-      .sort((a, b) => b.tokens - a.tokens);
+      .sort((a, b) => b.tokens - a.tokens)
 
     const significantTokenModels = tokenModels.filter(
-      (m) => m.percentage >= 20,
-    );
-    const minorTokenModels = tokenModels.filter((m) => m.percentage < 20);
+      m => m.percentage >= 20,
+    )
+    const minorTokenModels = tokenModels.filter(m => m.percentage < 20)
     const minorTokensTotal = minorTokenModels.reduce(
       (sum, m) => sum + m.tokens,
       0,
-    );
+    )
 
     return `
       <div class="p-6">
@@ -427,49 +391,49 @@ export class UIManager {
           <div class="bg-muted/30 rounded-lg p-4">
             <div class="flex rounded-md overflow-hidden border border-muted" style="height: 80px;">
               ${[
-                ...top3Models.map(([model, cost], index) => {
-                  const modelTokens = tokensPerModel?.[model] || 0;
-                  return {
-                    model,
-                    cost,
-                    tokens: modelTokens,
-                    gradient:
+    ...top3Models.map(([model, cost], index) => {
+      const modelTokens = tokensPerModel?.[model] || 0
+      return {
+        model,
+        cost,
+        tokens: modelTokens,
+        gradient:
                       index === 0
-                        ? "linear-gradient(90deg, #f87171 0%, #fb923c 100%)"
+                        ? 'linear-gradient(90deg, #f87171 0%, #fb923c 100%)'
                         : index === 1
-                          ? "linear-gradient(90deg, #4ade80 0%, #2dd4bf 100%)"
-                          : "linear-gradient(90deg, #60a5fa 0%, #6366f1 100%)",
-                  };
-                }),
-                ...(othersTotal > 0
-                  ? [
-                      {
-                        model: "Others",
-                        cost: othersTotal,
-                        tokens: othersModels.reduce(
-                          (sum, [model]) =>
-                            sum + (tokensPerModel?.[model] || 0),
-                          0,
-                        ),
-                        gradient:
-                          "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)",
-                      },
-                    ]
-                  : []),
-              ]
-                .map(({ model, cost, tokens, gradient }) => {
-                  const percentage = (cost / totalCost) * 100;
-                  const displayPercentage = Math.max(percentage, 3); // Ensure visibility
-                  return `
-                  <div class="text-white flex flex-col justify-center items-center p-2 relative overflow-hidden" style="width: ${percentage}%; min-width: ${displayPercentage || 3}px; background: ${gradient || "#gray"};">
-                    <div class="text-xs font-medium mb-1 text-center leading-tight" style="word-break: break-word; hyphens: auto;">${model || "Model"}</div>
+                          ? 'linear-gradient(90deg, #4ade80 0%, #2dd4bf 100%)'
+                          : 'linear-gradient(90deg, #60a5fa 0%, #6366f1 100%)',
+      }
+    }),
+    ...(othersTotal > 0
+      ? [
+        {
+          model: 'Others',
+          cost: othersTotal,
+          tokens: othersModels.reduce(
+            (sum, [model]) =>
+              sum + (tokensPerModel?.[model] || 0),
+            0,
+          ),
+          gradient:
+                          'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)',
+        },
+      ]
+      : []),
+  ]
+    .map(({model, cost, tokens, gradient}) => {
+      const percentage = (cost / totalCost) * 100
+      const displayPercentage = Math.max(percentage, 3)
+      return `
+                  <div class="text-white flex flex-col justify-center items-center p-2 relative overflow-hidden" style="width: ${percentage}%; min-width: ${displayPercentage || 3}px; background: ${gradient || '#gray'};">
+                    <div class="text-xs font-medium mb-1 text-center leading-tight" style="word-break: break-word; hyphens: auto;">${model || 'Model'}</div>
                     <div class="text-sm font-bold text-center whitespace-nowrap">${formatter.format(cost || 0)}</div>
                     <div class="text-xs opacity-90 text-center">${tokens.toLocaleString()} tokens</div>
                     <div class="absolute bottom-1 right-1 text-xs opacity-75">${(percentage || 0).toFixed(1)}%</div>
                   </div>
-                `;
-                })
-                .join("")}
+                `
+    })
+    .join('')}
             </div>
           </div>
 
@@ -479,46 +443,46 @@ export class UIManager {
             <div class="bg-muted/30 rounded-lg p-4">
               <div class="flex rounded-md overflow-hidden border border-muted" style="height: 80px;">
                 ${[
-                  ...significantTokenModels.map((modelData, index) => ({
-                    model: modelData.model,
-                    tokens: modelData.tokens,
-                    percentage: modelData.percentage,
-                    gradient:
+    ...significantTokenModels.map((modelData, index) => ({
+      model: modelData.model,
+      tokens: modelData.tokens,
+      percentage: modelData.percentage,
+      gradient:
                       index === 0
-                        ? "linear-gradient(90deg, #f87171 0%, #fb923c 100%)"
+                        ? 'linear-gradient(90deg, #f87171 0%, #fb923c 100%)'
                         : index === 1
-                          ? "linear-gradient(90deg, #4ade80 0%, #2dd4bf 100%)"
+                          ? 'linear-gradient(90deg, #4ade80 0%, #2dd4bf 100%)'
                           : index === 2
-                            ? "linear-gradient(90deg, #60a5fa 0%, #6366f1 100%)"
-                            : "linear-gradient(90deg, #a78bfa 0%, #c084fc 100%)",
-                  })),
-                  ...(minorTokensTotal > 0
-                    ? [
-                        {
-                          model: "Others",
-                          tokens: minorTokensTotal,
-                          percentage:
+                            ? 'linear-gradient(90deg, #60a5fa 0%, #6366f1 100%)'
+                            : 'linear-gradient(90deg, #a78bfa 0%, #c084fc 100%)',
+    })),
+    ...(minorTokensTotal > 0
+      ? [
+        {
+          model: 'Others',
+          tokens: minorTokensTotal,
+          percentage:
                             totalTokens > 0
                               ? (minorTokensTotal / totalTokens) * 100
                               : 0,
-                          gradient:
-                            "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)",
-                        },
-                      ]
-                    : []),
-                ]
-                  .map(({ model, tokens, percentage, gradient }) => {
-                    const displayPercentage = Math.max(percentage, 3); // Ensure visibility
-                    return `
-                    <div class="text-white flex flex-col justify-center items-center p-2 relative overflow-hidden" style="width: ${percentage}%; min-width: ${displayPercentage || 3}px; background: ${gradient || "#gray"};">
-                      <div class="text-xs font-medium mb-1 text-center leading-tight" style="word-break: break-word; hyphens: auto;">${model || "Model"}</div>
+          gradient:
+                            'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)',
+        },
+      ]
+      : []),
+  ]
+    .map(({model, tokens, percentage, gradient}) => {
+      const displayPercentage = Math.max(percentage, 3)
+      return `
+                    <div class="text-white flex flex-col justify-center items-center p-2 relative overflow-hidden" style="width: ${percentage}%; min-width: ${displayPercentage || 3}px; background: ${gradient || '#gray'};">
+                      <div class="text-xs font-medium mb-1 text-center leading-tight" style="word-break: break-word; hyphens: auto;">${model || 'Model'}</div>
                       <div class="text-sm font-bold text-center whitespace-nowrap">${tokens.toLocaleString()}</div>
                       <div class="text-xs opacity-90 text-center">tokens</div>
                       <div class="absolute bottom-1 right-1 text-xs opacity-75">${percentage.toFixed(1)}%</div>
                     </div>
-                  `;
-                  })
-                  .join("")}
+                  `
+    })
+    .join('')}
               </div>
             </div>
           </div>
@@ -564,8 +528,8 @@ export class UIManager {
             ${UIManager.generateModelRows(sortedModels.slice(0, 5), totalCost, formatter, 0, tokensPerModel)}
 
             ${
-              sortedModels.length > 5
-                ? `
+  sortedModels.length > 5
+    ? `
               <div id="additional-models" class="space-y-4" style="display: none;">
                 ${UIManager.generateModelRows(sortedModels.slice(5), totalCost, formatter, 5, tokensPerModel)}
               </div>
@@ -585,24 +549,24 @@ export class UIManager {
                 </span>
               </div>
             `
-                : ""
-            }
+    : ''
+}
 
             ${
-              sortedModels.length === Object.keys(aggregated).length
-                ? `
+  sortedModels.length === Object.keys(aggregated).length
+    ? `
               <div class="mt-3 text-center">
                 <span class="text-xs text-muted-foreground">
                   Showing all ${sortedModels.length} models
                 </span>
               </div>
             `
-                : ""
-            }
+    : ''
+}
           </div>
         </div>
       </div>
-    `;
+    `
   }
 
   private static generateModelRows(
@@ -614,9 +578,9 @@ export class UIManager {
   ): string {
     return models
       .map(([model, cost], index) => {
-        const percentage = (cost / totalCost) * 100;
-        const actualIndex = index + startIndex;
-        const modelTokens = tokensPerModel?.[model] || 0;
+        const percentage = (cost / totalCost) * 100
+        const actualIndex = index + startIndex
+        const modelTokens = tokensPerModel?.[model] || 0
         return `
         <div class="flex items-center justify-between p-3 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
           <div class="flex items-center gap-3">
@@ -637,9 +601,9 @@ export class UIManager {
             </div>
           </div>
         </div>
-      `;
+      `
       })
-      .join("");
+      .join('')
   }
 
   private static attachShowMoreHandlers(
@@ -650,64 +614,59 @@ export class UIManager {
     formatter: Intl.NumberFormat,
     tokensPerModel?: Record<string, number>,
   ): void {
-    const showMoreBtn = resultsContainer.querySelector("#show-more-btn");
+    const showMoreBtn = resultsContainer.querySelector('#show-more-btn')
     const additionalModels = resultsContainer.querySelector(
-      "#additional-models",
-    ) as HTMLElement;
+      '#additional-models',
+    ) as HTMLElement
     const showingMessage = resultsContainer.querySelector(
-      "#showing-message",
-    ) as HTMLElement;
+      '#showing-message',
+    ) as HTMLElement
     const modelsContainer = resultsContainer.querySelector(
-      "#models-container",
-    ) as HTMLElement;
+      '#models-container',
+    ) as HTMLElement
     const sortCostBtn = resultsContainer.querySelector(
-      "#sort-cost-btn",
-    ) as HTMLElement;
+      '#sort-cost-btn',
+    ) as HTMLElement
     const sortTokensBtn = resultsContainer.querySelector(
-      "#sort-tokens-btn",
-    ) as HTMLElement;
+      '#sort-tokens-btn',
+    ) as HTMLElement
 
-    // Sorting functionality
-    const updateSorting = (sortBy: "cost" | "tokens") => {
-      // Update button states
+    const updateSorting = (sortBy: 'cost' | 'tokens') => {
       if (sortCostBtn && sortTokensBtn) {
         sortCostBtn.className =
-          sortBy === "cost"
-            ? "px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md transition-colors active-sort"
-            : "px-3 py-1 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 rounded-md transition-colors";
+          sortBy === 'cost'
+            ? 'px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md transition-colors active-sort'
+            : 'px-3 py-1 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 rounded-md transition-colors'
         sortTokensBtn.className =
-          sortBy === "tokens"
-            ? "px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md transition-colors active-sort"
-            : "px-3 py-1 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 rounded-md transition-colors";
+          sortBy === 'tokens'
+            ? 'px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md transition-colors active-sort'
+            : 'px-3 py-1 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 rounded-md transition-colors'
       }
 
-      // Sort models
-      let sorted: [string, number][];
-      if (sortBy === "tokens" && tokensPerModel) {
-        // Sort by tokens but maintain cost data structure for display
+      let sorted: [string, number][]
+      if (sortBy === 'tokens' && tokensPerModel) {
         sorted = Object.keys(tokensPerModel)
           .sort((a, b) => (tokensPerModel[b] || 0) - (tokensPerModel[a] || 0))
           .slice(0, 10)
-          .map((model) => [model, aggregated[model] || 0]);
+          .map(model => [model, aggregated[model] || 0])
       } else {
         sorted = Object.entries(aggregated)
           .sort(([, a], [, b]) => b - a)
-          .slice(0, 10);
+          .slice(0, 10)
       }
 
-      // Update models container
       if (modelsContainer) {
         const isExpanded =
-          additionalModels && additionalModels.style.display !== "none";
-        const showCount = isExpanded ? sorted.length : 5;
+          additionalModels && additionalModels.style.display !== 'none'
+        const showCount = isExpanded ? sorted.length : 5
 
         modelsContainer.innerHTML = `
           ${UIManager.generateModelRows(sorted.slice(0, 5), totalCost, formatter, 0, tokensPerModel)}
 
           ${
-            sorted.length > 5
-              ? `
-            <div id="additional-models" class="space-y-4" style="display: ${isExpanded ? "block" : "none"};">
+  sorted.length > 5
+    ? `
+            <div id="additional-models" class="space-y-4" style="display: ${isExpanded ? 'block' : 'none'};">
               ${UIManager.generateModelRows(sorted.slice(5), totalCost, formatter, 5, tokensPerModel)}
             </div>
 
@@ -720,139 +679,128 @@ export class UIManager {
               </button>
             </div>
 
-            <div id="showing-message" class="mt-3 text-center" style="display: ${isExpanded ? "block" : "none"};">
+            <div id="showing-message" class="mt-3 text-center" style="display: ${isExpanded ? 'block' : 'none'};">
               <span class="text-xs text-muted-foreground">
                 Showing top ${showCount} of ${sorted.length} models
-              </span>
+               </span>
             </div>
           `
-              : ""
-          }
+    : ''
+}
 
           ${
-            sorted.length === Object.keys(aggregated).length
-              ? `
+  sorted.length === Object.keys(aggregated).length
+    ? `
             <div class="mt-3 text-center">
               <span class="text-xs text-muted-foreground">
                 Showing all ${sorted.length} models
               </span>
             </div>
           `
-              : ""
-          }
-        `;
+    : ''
+}
+        `
 
-        // Re-attach show more handler to the new button
-        const newShowMoreBtn = modelsContainer.querySelector("#show-more-btn");
+        const newShowMoreBtn = modelsContainer.querySelector('#show-more-btn')
         const newAdditionalModels = modelsContainer.querySelector(
-          "#additional-models",
-        ) as HTMLElement;
+          '#additional-models',
+        ) as HTMLElement
         const newShowingMessage = modelsContainer.querySelector(
-          "#showing-message",
-        ) as HTMLElement;
+          '#showing-message',
+        ) as HTMLElement
 
         if (newShowMoreBtn && newAdditionalModels) {
-          newShowMoreBtn.addEventListener("click", () => {
-            const isHidden = newAdditionalModels.style.display === "none";
+          newShowMoreBtn.addEventListener('click', () => {
+            const isHidden = newAdditionalModels.style.display === 'none'
 
             if (isHidden) {
-              newAdditionalModels.style.display = "block";
+              newAdditionalModels.style.display = 'block'
               if (newShowingMessage) {
-                newShowingMessage.style.display = "block";
+                newShowingMessage.style.display = 'block'
               }
               newShowMoreBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
                   <path fill-rule="evenodd" d="M11.47 7.72a.75.75 0 0 1 1.06 0l7.5 7.5a.75.75 0 1 1-1.06 1.06L12 9.31l-6.97 6.97a.75.75 0 0 1-1.06-1.06l7.5-7.5Z" clip-rule="evenodd" />
                 </svg>
                 Show less
-              `;
+              `
             } else {
-              newAdditionalModels.style.display = "none";
+              newAdditionalModels.style.display = 'none'
               if (newShowingMessage) {
-                newShowingMessage.style.display = "none";
+                newShowingMessage.style.display = 'none'
               }
               newShowMoreBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
                   <path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 0 1-1.06 0l-7.5-7.5a.75.75 0 0 1 1.06-1.06L12 14.69l6.97-6.97a.75.75 0 1 1 1.06 1.06l-7.5 7.5Z" clip-rule="evenodd" />
                 </svg>
                 Show ${sorted.length - 5} more models
-              `;
+              `
             }
-          });
+          })
         }
       }
-    };
+    }
 
-    // Add sort button event listeners
     if (sortCostBtn) {
-      sortCostBtn.addEventListener("click", () => updateSorting("cost"));
+      sortCostBtn.addEventListener('click', () => updateSorting('cost'))
     }
     if (sortTokensBtn) {
-      sortTokensBtn.addEventListener("click", () => updateSorting("tokens"));
+      sortTokensBtn.addEventListener('click', () => updateSorting('tokens'))
     }
 
-    // Original show more functionality
     if (showMoreBtn && additionalModels) {
-      showMoreBtn.addEventListener("click", () => {
-        const isHidden = additionalModels.style.display === "none";
+      showMoreBtn.addEventListener('click', () => {
+        const isHidden = additionalModels.style.display === 'none'
 
         if (isHidden) {
-          additionalModels.style.display = "block";
+          additionalModels.style.display = 'block'
           if (showingMessage) {
-            showingMessage.style.display = "block";
+            showingMessage.style.display = 'block'
           }
           showMoreBtn.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
               <path fill-rule="evenodd" d="M11.47 7.72a.75.75 0 0 1 1.06 0l7.5 7.5a.75.75 0 1 1-1.06 1.06L12 9.31l-6.97 6.97a.75.75 0 0 1-1.06-1.06l7.5-7.5Z" clip-rule="evenodd" />
             </svg>
             Show less
-          `;
+          `
         } else {
-          additionalModels.style.display = "none";
+          additionalModels.style.display = 'none'
           if (showingMessage) {
-            showingMessage.style.display = "none";
+            showingMessage.style.display = 'none'
           }
           showMoreBtn.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
               <path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 0 1-1.06 0l-7.5-7.5a.75.75 0 0 1 1.06-1.06L12 14.69l6.97-6.97a.75.75 0 1 1 1.06 1.06l-7.5 7.5Z" clip-rule="evenodd" />
             </svg>
             Show ${sortedModels.length - 5} more models
-          `;
+          `
         }
-      });
+      })
     }
   }
 
   private static animateIn(element: HTMLElement): void {
     setTimeout(() => {
-      element.style.opacity = "0";
-      element.style.transform = "translateY(-10px)";
-      element.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+      element.style.opacity = '0'
+      element.style.transform = 'translateY(-10px)'
+      element.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
 
       requestAnimationFrame(() => {
-        element.style.opacity = "1";
-        element.style.transform = "translateY(0)";
-      });
-    }, 10);
+        element.style.opacity = '1'
+        element.style.transform = 'translateY(0)'
+      })
+    }, 10)
   }
-
-  private static isDevMode(): boolean {
-    // Return the DEV_MODE from chrome.storage
-    return DEV_MODE;
-  }
-
   private static async handleForceRefresh(
     event: Event,
     exportBtn: Element,
     onClick: (event: Event, exportBtn: Element) => void,
   ): Promise<void> {
-    event.preventDefault();
+    event.preventDefault()
 
-    // Clear cache directly using API method
-    OpenRouterAPI.clearDevCache();
-    console.log("🗑️ DEV: Cache cleared, forcing fresh fetch...");
+    OpenRouterAPI.clearDevCache()
+    console.log('🗑️ DEV: Cache cleared, forcing fresh fetch...')
 
-    // Then trigger the normal analyze flow
-    onClick(event, exportBtn);
+    onClick(event, exportBtn)
   }
 }
